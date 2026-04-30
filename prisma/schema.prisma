@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  passwordHash   String
+  slug           String   @unique
+  timezone       String   @default("America/New_York")
+  workingHours   String   @default("{\"mon\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"tue\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"wed\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"thu\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"fri\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"sat\":{\"enabled\":false,\"start\":\"09:00\",\"end\":\"17:00\"},\"sun\":{\"enabled\":false,\"start\":\"09:00\",\"end\":\"17:00\"}}")
+  bufferMinutes      Int      @default(0)
+  zoomAccessToken    String?
+  zoomRefreshToken   String?
+  zoomTokenExpiresAt DateTime?
+  createdAt          DateTime @default(now())
+
+  calendarAccounts CalendarAccount[]
+  meetingTypes     MeetingType[]
+  bookings         Booking[]
+}
+
+model CalendarAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String
+  accountEmail String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  isMain       Boolean  @default(false)
+  mainCalId    String?
+  watchCalIds  String   @default("[]")
+  createdAt    DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([userId, accountEmail, provider])
+}
+
+model MeetingType {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  slug            String
+  durationMinutes Int      @default(30)
+  description     String?
+  isActive        Boolean  @default(true)
+  color           String   @default("#3B82F6")
+  locationOptions String   @default("[]")    // JSON: [{type, value, label}]
+  createdAt       DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([userId, slug])
+}
+
+model Booking {
+  id                String   @id @default(cuid())
+  meetingTypeId     String
+  userId            String
+  calendarAccountId String?
+  bookerName        String
+  bookerEmail       String
+  notes             String?
+  startTime         DateTime
+  endTime           DateTime
+  calendarEventId   String?
+  conferenceLink    String?
+  status            String   @default("confirmed")
+  createdAt         DateTime @default(now())
+
+  meetingType     MeetingType      @relation(fields: [meetingTypeId], references: [id])
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendarAccount CalendarAccount? @relation(fields: [calendarAccountId], references: [id])
+}
