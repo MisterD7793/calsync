@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Deploys no longer cause brief 500s (`ChunkLoadError`, missing client reference manifest) while the live server reads a `.next/` directory that's mid-overwrite by the new build — builds now go into an alternate directory and get swapped in atomically via symlink right before `pm2 restart`
+
 ## [0.2.0] - 2026-08-26
 
 ### Added
