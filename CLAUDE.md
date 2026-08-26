@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Changelog is in CHANGELOG.md.
 
 ## Commands
 
@@ -47,6 +47,10 @@ All required vars are in `.env`. Before running, fill in:
 - `SMTP_*` — any SMTP relay (Gmail app password works)
 - `NEXT_PUBLIC_BASE_URL` / `NEXTAUTH_URL` — set to production domain when deploying
 
-### Deployment (self-hosted)
+### Deployment
 
-Run `npm run build && npm start` behind a reverse proxy (Caddy/nginx). The SQLite DB file lives at `prisma/dev.db` by default; set `DATABASE_URL=file:/absolute/path/prod.db` for production. No external services required beyond SMTP.
+Push to `main` auto-deploys to production via `.github/workflows/deploy.yml` (SSH into misterd-vps, runs `scripts/deploy.sh`: git pull, backs up `prisma/prod.db`, prisma generate/migrate, build, `pm2 restart calsync`). No manual deploy needed for normal changes.
+
+### Changelog
+
+Keep `CHANGELOG.md` current as you go — don't wait to be asked. Whenever you land a user-facing change (a fix, a new feature, a behavior change), add an entry under `## [Unreleased]` in the same commit, following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format (`### Added` / `### Changed` / `### Fixed`). Roll `[Unreleased]` into a dated version heading (e.g. `## [0.3.0] - 2026-09-01`) when a batch of related changes ships together — use judgment on version bumps (this project doesn't tag releases). Skip internal-only changes (refactors, deploy tooling tweaks, memory/doc updates) unless they materially affect how the app behaves or is run.
