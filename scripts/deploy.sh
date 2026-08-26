@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 cd /var/www/calsync
-git pull
+# reset --hard (not pull) because npm on this box rewrites package-lock.json
+# in place on every build (strips a `libc` field its version doesn't emit),
+# which otherwise blocks the next pull with local-changes-would-be-overwritten
+git fetch origin
+git reset --hard origin/main
 cp prisma/prod.db "prisma/prod.db.bak-$(date +%Y%m%d%H%M%S)"
 npx prisma generate
 npx prisma migrate deploy
