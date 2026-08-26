@@ -120,6 +120,7 @@ export async function listEvents(
 
   return (res.data.items ?? [])
     .filter((e) => e.id && (e.start?.dateTime || e.start?.date) && (e.end?.dateTime || e.end?.date))
+    .filter((e) => e.transparency !== "transparent")
     .map((e) => ({
       id: e.id!,
       start: new Date(e.start!.dateTime ?? e.start!.date!),

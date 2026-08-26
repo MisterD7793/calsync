@@ -138,20 +138,22 @@ export async function listEvents(
   const params = new URLSearchParams({
     startDateTime: timeMin.toISOString(),
     endDateTime: timeMax.toISOString(),
-    $select: "id,start,end,lastModifiedDateTime",
+    $select: "id,start,end,lastModifiedDateTime,showAs",
     $top: "250",
   });
   const data = await graphGet(token, `/me/calendars/${calendarId}/calendarView?${params}`);
 
-  return (data.value ?? []).map(
-    (e: { id: string; start: { dateTime: string }; end: { dateTime: string }; lastModifiedDateTime: string }) => ({
-      id: e.id,
-      start: new Date(e.start.dateTime + "Z"),
-      end: new Date(e.end.dateTime + "Z"),
-      updated: e.lastModifiedDateTime,
-      cancelled: false,
-    })
-  );
+  return (data.value ?? [])
+    .filter((e: { showAs?: string }) => e.showAs !== "free")
+    .map(
+      (e: { id: string; start: { dateTime: string }; end: { dateTime: string }; lastModifiedDateTime: string }) => ({
+        id: e.id,
+        start: new Date(e.start.dateTime + "Z"),
+        end: new Date(e.end.dateTime + "Z"),
+        updated: e.lastModifiedDateTime,
+        cancelled: false,
+      })
+    );
 }
 
 export async function createBusyBlock(
