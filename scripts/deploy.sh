@@ -7,6 +7,7 @@ cd /var/www/calsync
 git fetch origin
 git reset --hard origin/main
 cp prisma/prod.db "prisma/prod.db.bak-$(date +%Y%m%d%H%M%S)"
+npm install
 npx prisma generate
 npx prisma migrate deploy
 
