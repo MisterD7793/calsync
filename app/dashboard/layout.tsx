@@ -32,11 +32,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </nav>
         <div className="p-4 border-t border-gray-200">
           <p className="text-xs text-gray-500 mb-2 truncate">{session.user.email}</p>
-          <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
-            <button type="submit" className="text-sm text-gray-600 hover:text-gray-900">
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center justify-between">
+            <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
+              <button type="submit" className="text-sm text-gray-600 hover:text-gray-900">
+                Sign out
+              </button>
+            </form>
+            <Link href="/dashboard/changelog" className="text-xs text-gray-400 hover:text-gray-600">
+              Version History
+            </Link>
+          </div>
         </div>
       </aside>
       <main className="flex-1 p-8 overflow-auto">{children}</main>
