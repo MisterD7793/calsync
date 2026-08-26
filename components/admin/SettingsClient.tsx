@@ -40,6 +40,7 @@ interface Props {
     slug: string;
     timezone: string;
     bufferMinutes: number;
+    blockSyncWindowDays: number;
     workingHours: WorkingHours;
     zoomConnected: boolean;
     zoomStatus?: string;
@@ -174,6 +175,33 @@ export default function SettingsClient({ initial }: Props) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+        <h2 className="font-semibold text-gray-900">Calendar Mirroring</h2>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Sync window (days before and after today)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={120}
+            value={form.blockSyncWindowDays}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                blockSyncWindowDays: Math.min(120, Math.max(1, Number(e.target.value) || 1)),
+              }))
+            }
+            className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            How far back and forward &quot;Mirror to Main&quot; looks each sync. Events outside this window keep
+            their existing Busy block on your main calendar but are no longer checked for changes. Max 120 days
+            in each direction.
+          </p>
         </div>
       </div>
 

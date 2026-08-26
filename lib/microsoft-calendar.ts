@@ -33,6 +33,9 @@ async function refreshIfNeeded(account: CalendarAccount): Promise<string> {
     }),
   });
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`Microsoft token refresh failed (${res.status}): ${JSON.stringify(data)}`);
+  }
   const newExpiry = new Date(Date.now() + data.expires_in * 1000);
   await prisma.calendarAccount.update({
     where: { id: account.id },
@@ -46,6 +49,20 @@ async function graphGet(token: string, path: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Graph API error ${res.status}: ${path}`);
+  return res.json();
+}
+
+async function graphRequest(token: string, method: string, path: string, body?: unknown) {
+  const res = await fetch(`${GRAPH_BASE}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok && res.status !== 404) throw new Error(`Graph API error ${res.status}: ${path}`);
+  if (res.status === 204 || res.status === 404) return null;
   return res.json();
 }
 
@@ -101,6 +118,76 @@ export async function getFreeBusy(
     }
   }
   return intervals;
+}
+
+export interface RemoteEvent {
+  id: string;
+  start: Date;
+  end: Date;
+  updated: string;
+  cancelled: boolean;
+}
+
+export async function listEvents(
+  account: CalendarAccount,
+  calendarId: string,
+  timeMin: Date,
+  timeMax: Date
+): Promise<RemoteEvent[]> {
+  const token = await refreshIfNeeded(account);
+  const params = new URLSearchParams({
+    startDateTime: timeMin.toISOString(),
+    endDateTime: timeMax.toISOString(),
+    $select: "id,start,end,lastModifiedDateTime",
+    $top: "250",
+  });
+  const data = await graphGet(token, `/me/calendars/${calendarId}/calendarView?${params}`);
+
+  return (data.value ?? []).map(
+    (e: { id: string; start: { dateTime: string }; end: { dateTime: string }; lastModifiedDateTime: string }) => ({
+      id: e.id,
+      start: new Date(e.start.dateTime + "Z"),
+      end: new Date(e.end.dateTime + "Z"),
+      updated: e.lastModifiedDateTime,
+      cancelled: false,
+    })
+  );
+}
+
+export async function createBusyBlock(
+  account: CalendarAccount,
+  calendarId: string,
+  start: Date,
+  end: Date,
+  title: string
+): Promise<string> {
+  const token = await refreshIfNeeded(account);
+  const data = await graphRequest(token, "POST", `/me/calendars/${calendarId}/events`, {
+    subject: title,
+    start: { dateTime: start.toISOString(), timeZone: "UTC" },
+    end: { dateTime: end.toISOString(), timeZone: "UTC" },
+    showAs: "busy",
+  });
+  return data.id;
+}
+
+export async function updateBusyBlock(
+  account: CalendarAccount,
+  calendarId: string,
+  eventId: string,
+  start: Date,
+  end: Date
+): Promise<void> {
+  const token = await refreshIfNeeded(account);
+  await graphRequest(token, "PATCH", `/me/calendars/${calendarId}/events/${eventId}`, {
+    start: { dateTime: start.toISOString(), timeZone: "UTC" },
+    end: { dateTime: end.toISOString(), timeZone: "UTC" },
+  });
+}
+
+export async function deleteEvent(account: CalendarAccount, calendarId: string, eventId: string): Promise<void> {
+  const token = await refreshIfNeeded(account);
+  await graphRequest(token, "DELETE", `/me/calendars/${calendarId}/events/${eventId}`);
 }
 
 export async function createEvent(

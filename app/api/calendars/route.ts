@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import * as Google from "@/lib/google-calendar";
 import * as Microsoft from "@/lib/microsoft-calendar";
+import { removeMirrorsForAccount } from "@/lib/block-sync";
 
 // GET /api/calendars — list all connected accounts with their calendars
 export async function GET() {
@@ -30,6 +31,7 @@ export async function GET() {
         isMain: account.isMain,
         mainCalId: account.mainCalId,
         watchCalIds: JSON.parse(account.watchCalIds) as string[],
+        mirrorCalIds: JSON.parse(account.mirrorCalIds) as string[],
         calendars,
       };
     })
@@ -43,7 +45,7 @@ export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { accountId, watchCalIds, isMain, mainCalId } = await req.json();
+  const { accountId, watchCalIds, mirrorCalIds, isMain, mainCalId } = await req.json();
 
   const account = await prisma.calendarAccount.findFirst({
     where: { id: accountId, userId: session.user.id },
@@ -62,6 +64,7 @@ export async function PATCH(req: NextRequest) {
     where: { id: accountId },
     data: {
       ...(watchCalIds !== undefined && { watchCalIds: JSON.stringify(watchCalIds) }),
+      ...(mirrorCalIds !== undefined && { mirrorCalIds: JSON.stringify(mirrorCalIds) }),
       ...(isMain !== undefined && { isMain }),
       ...(mainCalId !== undefined && { mainCalId }),
     },
@@ -78,6 +81,12 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
+  const account = await prisma.calendarAccount.findFirst({
+    where: { id, userId: session.user.id },
+  });
+  if (!account) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await removeMirrorsForAccount(id);
   await prisma.calendarAccount.deleteMany({
     where: { id, userId: session.user.id },
   });

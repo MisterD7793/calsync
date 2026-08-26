@@ -15,6 +15,7 @@ model User {
   timezone       String   @default("America/New_York")
   workingHours   String   @default("{\"mon\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"tue\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"wed\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"thu\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"fri\":{\"enabled\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"sat\":{\"enabled\":false,\"start\":\"09:00\",\"end\":\"17:00\"},\"sun\":{\"enabled\":false,\"start\":\"09:00\",\"end\":\"17:00\"}}")
   bufferMinutes      Int      @default(0)
+  blockSyncWindowDays Int     @default(60)
   zoomAccessToken    String?
   zoomRefreshToken   String?
   zoomTokenExpiresAt DateTime?
@@ -23,6 +24,7 @@ model User {
   calendarAccounts CalendarAccount[]
   meetingTypes     MeetingType[]
   bookings         Booking[]
+  mirroredBlocks   MirroredBlock[]
 }
 
 model CalendarAccount {
@@ -36,12 +38,38 @@ model CalendarAccount {
   isMain       Boolean  @default(false)
   mainCalId    String?
   watchCalIds  String   @default("[]")
+  mirrorCalIds String   @default("[]")
   createdAt    DateTime @default(now())
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings         Booking[]
+  mirrorsAsSource  MirroredBlock[] @relation("MirrorSource")
+  mirrorsAsTarget  MirroredBlock[] @relation("MirrorTarget")
 
   @@unique([userId, accountEmail, provider])
+}
+
+// Tracks "Busy" placeholder events written to a Main calendar to mirror
+// events from other watched calendars. Kept independent of Booking/MeetingType
+// so this sync feature can be extracted as a standalone product later.
+model MirroredBlock {
+  id              String   @id @default(cuid())
+  userId          String
+  sourceAccountId String
+  sourceCalId     String
+  sourceEventId   String
+  sourceUpdatedAt String
+  startTime       DateTime
+  endTime         DateTime
+  mainAccountId   String
+  mainEventId     String
+  createdAt       DateTime @default(now())
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceAccount CalendarAccount @relation("MirrorSource", fields: [sourceAccountId], references: [id], onDelete: Cascade)
+  mainAccount   CalendarAccount @relation("MirrorTarget", fields: [mainAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceAccountId, sourceCalId, sourceEventId])
 }
 
 model MeetingType {

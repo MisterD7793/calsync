@@ -7,7 +7,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const { zoom } = await searchParams;
   const user = await prisma.user.findUnique({
     where: { id: session!.user!.id! },
-    select: { name: true, email: true, slug: true, timezone: true, bufferMinutes: true, workingHours: true, zoomAccessToken: true },
+    select: {
+      name: true,
+      email: true,
+      slug: true,
+      timezone: true,
+      bufferMinutes: true,
+      blockSyncWindowDays: true,
+      workingHours: true,
+      zoomAccessToken: true,
+    },
   });
 
   return (

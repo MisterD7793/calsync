@@ -93,6 +93,98 @@ export async function getFreeBusy(
   return intervals;
 }
 
+export interface RemoteEvent {
+  id: string;
+  start: Date;
+  end: Date;
+  updated: string;
+  cancelled: boolean;
+}
+
+export async function listEvents(
+  account: CalendarAccount,
+  calendarId: string,
+  timeMin: Date,
+  timeMax: Date
+): Promise<RemoteEvent[]> {
+  const auth = await getAuthedClient(account);
+  const cal = google.calendar({ version: "v3", auth });
+
+  const res = await cal.events.list({
+    calendarId,
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+    singleEvents: true,
+    showDeleted: true,
+  });
+
+  return (res.data.items ?? [])
+    .filter((e) => e.id && (e.start?.dateTime || e.start?.date) && (e.end?.dateTime || e.end?.date))
+    .map((e) => ({
+      id: e.id!,
+      start: new Date(e.start!.dateTime ?? e.start!.date!),
+      end: new Date(e.end!.dateTime ?? e.end!.date!),
+      updated: e.updated ?? "",
+      cancelled: e.status === "cancelled",
+    }));
+}
+
+export async function createBusyBlock(
+  account: CalendarAccount,
+  calendarId: string,
+  start: Date,
+  end: Date,
+  title: string
+): Promise<string> {
+  const auth = await getAuthedClient(account);
+  const cal = google.calendar({ version: "v3", auth });
+
+  const res = await cal.events.insert({
+    calendarId,
+    requestBody: {
+      summary: title,
+      start: { dateTime: start.toISOString() },
+      end: { dateTime: end.toISOString() },
+      transparency: "opaque",
+    },
+  });
+
+  return res.data.id!;
+}
+
+export async function updateBusyBlock(
+  account: CalendarAccount,
+  calendarId: string,
+  eventId: string,
+  start: Date,
+  end: Date
+): Promise<void> {
+  const auth = await getAuthedClient(account);
+  const cal = google.calendar({ version: "v3", auth });
+
+  await cal.events.patch({
+    calendarId,
+    eventId,
+    requestBody: {
+      start: { dateTime: start.toISOString() },
+      end: { dateTime: end.toISOString() },
+    },
+  });
+}
+
+export async function deleteEvent(
+  account: CalendarAccount,
+  calendarId: string,
+  eventId: string
+): Promise<void> {
+  const auth = await getAuthedClient(account);
+  const cal = google.calendar({ version: "v3", auth });
+  await cal.events.delete({ calendarId, eventId }).catch((err: unknown) => {
+    const status = (err as { code?: number })?.code;
+    if (status !== 404 && status !== 410) throw err;
+  });
+}
+
 export async function createEvent(
   account: CalendarAccount,
   calendarId: string,

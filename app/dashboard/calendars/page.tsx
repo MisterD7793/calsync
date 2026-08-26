@@ -8,7 +8,10 @@ export default async function CalendarsPage() {
   const session = await auth();
   const userId = session!.user!.id!;
 
-  const accounts = await prisma.calendarAccount.findMany({ where: { userId } });
+  const [accounts, user] = await Promise.all([
+    prisma.calendarAccount.findMany({ where: { userId } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { blockSyncWindowDays: true } }),
+  ]);
 
   const accountsWithCalendars = await Promise.all(
     accounts.map(async (account) => {
@@ -26,6 +29,7 @@ export default async function CalendarsPage() {
         isMain: account.isMain,
         mainCalId: account.mainCalId,
         watchCalIds: JSON.parse(account.watchCalIds) as string[],
+        mirrorCalIds: JSON.parse(account.mirrorCalIds) as string[],
         calendars,
       };
     })
@@ -65,7 +69,7 @@ export default async function CalendarsPage() {
           Connect Microsoft
         </a>
       </div>
-      <CalendarsClient accounts={accountsWithCalendars} />
+      <CalendarsClient accounts={accountsWithCalendars} blockSyncWindowDays={user!.blockSyncWindowDays} />
     </div>
   );
 }

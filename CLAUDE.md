@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev          # Start dev server (localhost:3000)
+npm run dev          # Start dev server (localhost:3002)
 npm run build        # Production build
 npx tsc --noEmit     # Type-check without building
 npx prisma migrate dev --name <name>   # Create and apply a migration

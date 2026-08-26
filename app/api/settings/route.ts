@@ -13,6 +13,7 @@ const Schema = z.object({
   name: z.string().optional(),
   timezone: z.string().optional(),
   bufferMinutes: z.number().min(0).max(60).optional(),
+  blockSyncWindowDays: z.number().min(1).max(120).optional(),
   workingHours: z.record(z.string(), WorkingDaySchema).optional(),
 });
 
@@ -22,7 +23,15 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, email: true, slug: true, timezone: true, bufferMinutes: true, workingHours: true },
+    select: {
+      name: true,
+      email: true,
+      slug: true,
+      timezone: true,
+      bufferMinutes: true,
+      blockSyncWindowDays: true,
+      workingHours: true,
+    },
   });
   return NextResponse.json(user);
 }
@@ -42,7 +51,15 @@ export async function PATCH(req: NextRequest) {
       ...rest,
       ...(workingHours && { workingHours: JSON.stringify(workingHours) }),
     },
-    select: { name: true, email: true, slug: true, timezone: true, bufferMinutes: true, workingHours: true },
+    select: {
+      name: true,
+      email: true,
+      slug: true,
+      timezone: true,
+      bufferMinutes: true,
+      blockSyncWindowDays: true,
+      workingHours: true,
+    },
   });
   return NextResponse.json(user);
 }
