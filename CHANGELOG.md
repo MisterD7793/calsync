@@ -9,9 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Version History page (`/dashboard/changelog`), linked from the dashboard sidebar footer — renders `CHANGELOG.md`
 
+### Changed
+- Deploy pipeline now builds in GitHub Actions (not on the VPS) and ships the result via `rsync`, matching the pattern already used by other self-hosted projects on this box. The VPS only runs `npm ci --omit=dev`, Prisma generate/migrate, and a restart — no more building under the box's RAM constraints
+- Deploys now run as a dedicated non-root `deploy` user with a sudoers rule scoped to exactly `pm2 restart calsync`, instead of full root SSH access
+
 ### Fixed
-- Deploys no longer cause brief 500s (`ChunkLoadError`, missing client reference manifest) while the live server reads a `.next/` directory that's mid-overwrite by the new build — builds now go into an alternate directory and get swapped in atomically via symlink right before `pm2 restart`
-- Deploy script no longer breaks when npm rewrites `package-lock.json` in place on the VPS — uses `git reset --hard` instead of `git pull`
+- Deploys no longer cause brief 500s (`ChunkLoadError`, missing client reference manifest) while the live server reads a `.next/` directory that's mid-overwrite by the new build — the incoming build now lands in an alternate directory and gets swapped in atomically via symlink right before `pm2 restart`
 
 ## [0.2.0] - 2026-08-26
 
