@@ -172,10 +172,13 @@ function eventTimes(start: Date, end: Date, allDay: boolean, timeZone: string) {
     return {
       start: { dateTime: start.toISOString(), timeZone: "UTC" },
       end: { dateTime: end.toISOString(), timeZone: "UTC" },
+      showAs: "busy",
     };
   }
+  // Free so Outlook lists it in the all-day strip without shading the whole day.
   return {
     isAllDay: true,
+    showAs: "free",
     start: { dateTime: start.toISOString().slice(0, 10) + "T00:00:00", timeZone },
     end: { dateTime: end.toISOString().slice(0, 10) + "T00:00:00", timeZone },
   };
@@ -194,7 +197,6 @@ export async function createBusyBlock(
   const data = await graphRequest(token, "POST", `/me/calendars/${calendarId}/events`, {
     subject: title,
     ...eventTimes(start, end, allDay, timeZone),
-    showAs: "busy",
   });
   return data.id;
 }

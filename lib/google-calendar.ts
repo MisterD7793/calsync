@@ -132,11 +132,20 @@ export async function listEvents(
     }));
 }
 
-// All-day dates are carried as UTC midnight of the calendar date.
+// All-day dates are carried as UTC midnight of the calendar date. All-day
+// mirrors are transparent so they show as a banner without blocking the day.
 function eventTimes(start: Date, end: Date, allDay: boolean) {
   return allDay
-    ? { start: { date: start.toISOString().slice(0, 10) }, end: { date: end.toISOString().slice(0, 10) } }
-    : { start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
+    ? {
+        start: { date: start.toISOString().slice(0, 10) },
+        end: { date: end.toISOString().slice(0, 10) },
+        transparency: "transparent",
+      }
+    : {
+        start: { dateTime: start.toISOString() },
+        end: { dateTime: end.toISOString() },
+        transparency: "opaque",
+      };
 }
 
 export async function createBusyBlock(
@@ -156,7 +165,6 @@ export async function createBusyBlock(
     requestBody: {
       summary: title,
       ...eventTimes(start, end, allDay),
-      transparency: "opaque",
     },
   });
 
