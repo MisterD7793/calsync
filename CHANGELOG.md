@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deploys now run as a dedicated non-root `deploy` user with a sudoers rule scoped to exactly `pm2 restart calsync`, instead of full root SSH access
 
 ### Fixed
-- All-day events on watched calendars are now mirrored to Main as all-day Busy blocks, instead of as a timed 24-hour block that started at midnight UTC (7–8pm the evening before, Eastern). Existing mis-mirrored blocks are recreated correctly on the next sync
+- All-day events on watched calendars are now mirrored to Main as all-day Busy blocks, instead of as a timed 24-hour block that started at midnight UTC (7–8pm the evening before, Eastern). Existing mis-mirrored blocks are recreated correctly on the next sync. On Outlook, all-day blocks are created in the user's time zone so Outlook doesn't show them with "12:00 AM – 12:00 AM" times
 - Deploys no longer cause brief 500s (`ChunkLoadError`, missing client reference manifest) while the live server reads a `.next/` directory that's mid-overwrite by the new build — the incoming build now lands in an alternate directory and gets swapped in atomically via symlink right before `pm2 restart`
 
 ## [0.2.0] - 2026-08-26

@@ -165,7 +165,9 @@ export async function listEvents(
     );
 }
 
-function eventTimes(start: Date, end: Date, allDay: boolean) {
+// Outlook pins all-day events to a time zone and shows times when it differs
+// from the viewer's, so all-day blocks are created in the user's zone.
+function eventTimes(start: Date, end: Date, allDay: boolean, timeZone: string) {
   if (!allDay) {
     return {
       start: { dateTime: start.toISOString(), timeZone: "UTC" },
@@ -174,8 +176,8 @@ function eventTimes(start: Date, end: Date, allDay: boolean) {
   }
   return {
     isAllDay: true,
-    start: { dateTime: start.toISOString().slice(0, 10) + "T00:00:00", timeZone: "UTC" },
-    end: { dateTime: end.toISOString().slice(0, 10) + "T00:00:00", timeZone: "UTC" },
+    start: { dateTime: start.toISOString().slice(0, 10) + "T00:00:00", timeZone },
+    end: { dateTime: end.toISOString().slice(0, 10) + "T00:00:00", timeZone },
   };
 }
 
@@ -185,12 +187,13 @@ export async function createBusyBlock(
   start: Date,
   end: Date,
   title: string,
-  allDay: boolean
+  allDay: boolean,
+  timeZone: string
 ): Promise<string> {
   const token = await refreshIfNeeded(account);
   const data = await graphRequest(token, "POST", `/me/calendars/${calendarId}/events`, {
     subject: title,
-    ...eventTimes(start, end, allDay),
+    ...eventTimes(start, end, allDay, timeZone),
     showAs: "busy",
   });
   return data.id;
@@ -202,10 +205,16 @@ export async function updateBusyBlock(
   eventId: string,
   start: Date,
   end: Date,
-  allDay: boolean
+  allDay: boolean,
+  timeZone: string
 ): Promise<void> {
   const token = await refreshIfNeeded(account);
-  await graphRequest(token, "PATCH", `/me/calendars/${calendarId}/events/${eventId}`, eventTimes(start, end, allDay));
+  await graphRequest(
+    token,
+    "PATCH",
+    `/me/calendars/${calendarId}/events/${eventId}`,
+    eventTimes(start, end, allDay, timeZone)
+  );
 }
 
 export async function deleteEvent(account: CalendarAccount, calendarId: string, eventId: string): Promise<void> {

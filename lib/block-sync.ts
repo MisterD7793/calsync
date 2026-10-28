@@ -82,7 +82,8 @@ export async function syncBlocksForUser(userId: string): Promise<void> {
               ev.start,
               ev.end,
               MIRROR_TITLE,
-              ev.allDay
+              ev.allDay,
+              user.timezone
             );
             await prisma.mirroredBlock.create({
               data: {
@@ -110,7 +111,8 @@ export async function syncBlocksForUser(userId: string): Promise<void> {
               existing.mainEventId,
               ev.start,
               ev.end,
-              ev.allDay
+              ev.allDay,
+              user.timezone
             );
             await prisma.mirroredBlock.update({
               where: { id: existing.id },

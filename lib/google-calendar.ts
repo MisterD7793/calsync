@@ -145,7 +145,8 @@ export async function createBusyBlock(
   start: Date,
   end: Date,
   title: string,
-  allDay: boolean
+  allDay: boolean,
+  _timeZone: string // Google all-day dates are floating; only Outlook needs this
 ): Promise<string> {
   const auth = await getAuthedClient(account);
   const cal = google.calendar({ version: "v3", auth });
@@ -168,7 +169,8 @@ export async function updateBusyBlock(
   eventId: string,
   start: Date,
   end: Date,
-  allDay: boolean
+  allDay: boolean,
+  _timeZone: string
 ): Promise<void> {
   const auth = await getAuthedClient(account);
   const cal = google.calendar({ version: "v3", auth });
