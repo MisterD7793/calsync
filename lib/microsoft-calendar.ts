@@ -145,7 +145,7 @@ export async function listEvents(
   const data = await graphGet(token, `/me/calendars/${calendarId}/calendarView?${params}`);
 
   return (data.value ?? [])
-    .filter((e: { showAs?: string }) => e.showAs !== "free")
+    .filter((e: { showAs?: string; isAllDay?: boolean }) => e.isAllDay || e.showAs !== "free")
     .map(
       (e: {
         id: string;
