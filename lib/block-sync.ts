@@ -58,11 +58,18 @@ export async function syncBlocksForUser(userId: string): Promise<void> {
       for (const ev of events) {
         if (ourMainEventIds.has(ev.id)) continue; // don't re-mirror our own blocks
         const key = `${account.id}:${calId}:${ev.id}`;
-        const existing = mirrorByKey.get(key);
+        let existing = mirrorByKey.get(key);
 
         if (ev.cancelled) {
           if (existing) await deleteMirror(mainAccount, existing);
           continue;
+        }
+
+        // Switching between timed and all-day can't be patched cleanly
+        // (and repairs mirrors created before all-day support): recreate.
+        if (existing && existing.allDay !== ev.allDay) {
+          await deleteMirror(mainAccount, existing);
+          existing = undefined;
         }
 
         seenKeys.add(key);
@@ -74,7 +81,8 @@ export async function syncBlocksForUser(userId: string): Promise<void> {
               mainAccount.mainCalId!,
               ev.start,
               ev.end,
-              MIRROR_TITLE
+              MIRROR_TITLE,
+              ev.allDay
             );
             await prisma.mirroredBlock.create({
               data: {
@@ -85,6 +93,7 @@ export async function syncBlocksForUser(userId: string): Promise<void> {
                 sourceUpdatedAt: ev.updated,
                 startTime: ev.start,
                 endTime: ev.end,
+                allDay: ev.allDay,
                 mainAccountId: mainAccount.id,
                 mainEventId,
               },
@@ -100,7 +109,8 @@ export async function syncBlocksForUser(userId: string): Promise<void> {
               mainAccount.mainCalId!,
               existing.mainEventId,
               ev.start,
-              ev.end
+              ev.end,
+              ev.allDay
             );
             await prisma.mirroredBlock.update({
               where: { id: existing.id },

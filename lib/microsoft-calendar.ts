@@ -126,6 +126,7 @@ export interface RemoteEvent {
   end: Date;
   updated: string;
   cancelled: boolean;
+  allDay: boolean;
 }
 
 export async function listEvents(
@@ -138,7 +139,7 @@ export async function listEvents(
   const params = new URLSearchParams({
     startDateTime: timeMin.toISOString(),
     endDateTime: timeMax.toISOString(),
-    $select: "id,start,end,lastModifiedDateTime,showAs",
+    $select: "id,start,end,lastModifiedDateTime,showAs,isAllDay",
     $top: "250",
   });
   const data = await graphGet(token, `/me/calendars/${calendarId}/calendarView?${params}`);
@@ -146,14 +147,36 @@ export async function listEvents(
   return (data.value ?? [])
     .filter((e: { showAs?: string }) => e.showAs !== "free")
     .map(
-      (e: { id: string; start: { dateTime: string }; end: { dateTime: string }; lastModifiedDateTime: string }) => ({
+      (e: {
+        id: string;
+        start: { dateTime: string };
+        end: { dateTime: string };
+        lastModifiedDateTime: string;
+        isAllDay?: boolean;
+      }) => ({
         id: e.id,
-        start: new Date(e.start.dateTime + "Z"),
-        end: new Date(e.end.dateTime + "Z"),
+        // All-day events are floating dates; keep just the date as UTC midnight.
+        start: new Date(e.isAllDay ? e.start.dateTime.slice(0, 10) : e.start.dateTime + "Z"),
+        end: new Date(e.isAllDay ? e.end.dateTime.slice(0, 10) : e.end.dateTime + "Z"),
         updated: e.lastModifiedDateTime,
         cancelled: false,
+        allDay: !!e.isAllDay,
       })
     );
+}
+
+function eventTimes(start: Date, end: Date, allDay: boolean) {
+  if (!allDay) {
+    return {
+      start: { dateTime: start.toISOString(), timeZone: "UTC" },
+      end: { dateTime: end.toISOString(), timeZone: "UTC" },
+    };
+  }
+  return {
+    isAllDay: true,
+    start: { dateTime: start.toISOString().slice(0, 10) + "T00:00:00", timeZone: "UTC" },
+    end: { dateTime: end.toISOString().slice(0, 10) + "T00:00:00", timeZone: "UTC" },
+  };
 }
 
 export async function createBusyBlock(
@@ -161,13 +184,13 @@ export async function createBusyBlock(
   calendarId: string,
   start: Date,
   end: Date,
-  title: string
+  title: string,
+  allDay: boolean
 ): Promise<string> {
   const token = await refreshIfNeeded(account);
   const data = await graphRequest(token, "POST", `/me/calendars/${calendarId}/events`, {
     subject: title,
-    start: { dateTime: start.toISOString(), timeZone: "UTC" },
-    end: { dateTime: end.toISOString(), timeZone: "UTC" },
+    ...eventTimes(start, end, allDay),
     showAs: "busy",
   });
   return data.id;
@@ -178,13 +201,11 @@ export async function updateBusyBlock(
   calendarId: string,
   eventId: string,
   start: Date,
-  end: Date
+  end: Date,
+  allDay: boolean
 ): Promise<void> {
   const token = await refreshIfNeeded(account);
-  await graphRequest(token, "PATCH", `/me/calendars/${calendarId}/events/${eventId}`, {
-    start: { dateTime: start.toISOString(), timeZone: "UTC" },
-    end: { dateTime: end.toISOString(), timeZone: "UTC" },
-  });
+  await graphRequest(token, "PATCH", `/me/calendars/${calendarId}/events/${eventId}`, eventTimes(start, end, allDay));
 }
 
 export async function deleteEvent(account: CalendarAccount, calendarId: string, eventId: string): Promise<void> {

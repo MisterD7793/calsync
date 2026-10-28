@@ -99,6 +99,7 @@ export interface RemoteEvent {
   end: Date;
   updated: string;
   cancelled: boolean;
+  allDay: boolean;
 }
 
 export async function listEvents(
@@ -127,7 +128,15 @@ export async function listEvents(
       end: new Date(e.end!.dateTime ?? e.end!.date!),
       updated: e.updated ?? "",
       cancelled: e.status === "cancelled",
+      allDay: !e.start!.dateTime,
     }));
+}
+
+// All-day dates are carried as UTC midnight of the calendar date.
+function eventTimes(start: Date, end: Date, allDay: boolean) {
+  return allDay
+    ? { start: { date: start.toISOString().slice(0, 10) }, end: { date: end.toISOString().slice(0, 10) } }
+    : { start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
 }
 
 export async function createBusyBlock(
@@ -135,7 +144,8 @@ export async function createBusyBlock(
   calendarId: string,
   start: Date,
   end: Date,
-  title: string
+  title: string,
+  allDay: boolean
 ): Promise<string> {
   const auth = await getAuthedClient(account);
   const cal = google.calendar({ version: "v3", auth });
@@ -144,8 +154,7 @@ export async function createBusyBlock(
     calendarId,
     requestBody: {
       summary: title,
-      start: { dateTime: start.toISOString() },
-      end: { dateTime: end.toISOString() },
+      ...eventTimes(start, end, allDay),
       transparency: "opaque",
     },
   });
@@ -158,7 +167,8 @@ export async function updateBusyBlock(
   calendarId: string,
   eventId: string,
   start: Date,
-  end: Date
+  end: Date,
+  allDay: boolean
 ): Promise<void> {
   const auth = await getAuthedClient(account);
   const cal = google.calendar({ version: "v3", auth });
@@ -166,10 +176,7 @@ export async function updateBusyBlock(
   await cal.events.patch({
     calendarId,
     eventId,
-    requestBody: {
-      start: { dateTime: start.toISOString() },
-      end: { dateTime: end.toISOString() },
-    },
+    requestBody: eventTimes(start, end, allDay),
   });
 }
 
